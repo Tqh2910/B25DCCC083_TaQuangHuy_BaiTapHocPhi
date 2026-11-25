@@ -1,6 +1,12 @@
 import java.util.*;
 
-abstract class SinhVien {
+class DuLieuKhongHopLeException extends Exception {
+    public DuLieuKhongHopLeException(String message) {
+        super(message);
+    }
+}
+
+abstract class SinhVien implements Comparable<SinhVien> {
     protected String maHe;
     protected String maSV;
     protected int soTinChi;
@@ -12,6 +18,22 @@ abstract class SinhVien {
     }
 
     public abstract long hocPhi();
+
+    public String getMaSV() {
+        return maSV;
+    }
+
+    public String getMaHe() {
+        return maHe;
+    }
+
+    @Override
+    public int compareTo(SinhVien o) {
+        if (this.hocPhi() != o.hocPhi()) {
+            return Long.compare(o.hocPhi(), this.hocPhi());
+        }
+        return this.maSV.compareTo(o.maSV);
+    }
 
     @Override
     public String toString() {
@@ -52,30 +74,95 @@ class SinhVienLT extends SinhVien {
     }
 }
 
+class QuanLyHocPhi {
+    private List<SinhVien> ds;
+    private Set<String> maDaCo;
+
+    public QuanLyHocPhi() {
+        ds = new ArrayList<>();
+        maDaCo = new HashSet<>();
+    }
+
+    public void themSinhVien(String maHe, String maSV, String tinChiStr) throws DuLieuKhongHopLeException {
+        if (!maHe.equals("CQ") && !maHe.equals("CLC") && !maHe.equals("LT")) {
+            throw new DuLieuKhongHopLeException("Mã hệ không hợp lệ");
+        }
+
+        int soTinChi;
+        try {
+            soTinChi = Integer.parseInt(tinChiStr);
+        } catch (NumberFormatException e) {
+            throw new DuLieuKhongHopLeException("Số tín chỉ không phải số nguyên");
+        }
+
+        if (soTinChi < 1 || soTinChi > 30) {
+            throw new DuLieuKhongHopLeException("Số tín chỉ ngoài [1, 30]");
+        }
+
+        if (maDaCo.contains(maSV)) {
+            throw new DuLieuKhongHopLeException("Trùng mã sinh viên hợp lệ");
+        }
+
+        SinhVien sv;
+        if (maHe.equals("CQ")) {
+            sv = new SinhVienCQ(maSV, soTinChi);
+        } else if (maHe.equals("CLC")) {
+            sv = new SinhVienCLC(maSV, soTinChi);
+        } else {
+            sv = new SinhVienLT(maSV, soTinChi);
+        }
+
+        ds.add(sv);
+        maDaCo.add(maSV);
+    }
+
+    public void sapXep() {
+        Collections.sort(ds);
+    }
+
+    public List<SinhVien> getDanhSach() {
+        return ds;
+    }
+
+    public long tongHocPhi() {
+        long tong = 0;
+        for (SinhVien sv : ds) {
+            tong += sv.hocPhi();
+        }
+        return tong;
+    }
+}
+
 public class Main {
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         if (!sc.hasNext()) return;
 
         int n = Integer.parseInt(sc.next().replace("\uFEFF", ""));
-        List<SinhVien> list = new ArrayList<>();
+        QuanLyHocPhi ql = new QuanLyHocPhi();
+        List<String> danhSachInvalid = new ArrayList<>();
 
         for (int i = 0; i < n; i++) {
             String maHe = sc.next();
             String maSV = sc.next();
-            int soTinChi = sc.nextInt();
+            String tinChiStr = sc.next();
 
-            if (maHe.equals("CQ")) {
-                list.add(new SinhVienCQ(maSV, soTinChi));
-            } else if (maHe.equals("CLC")) {
-                list.add(new SinhVienCLC(maSV, soTinChi));
-            } else if (maHe.equals("LT")) {
-                list.add(new SinhVienLT(maSV, soTinChi));
+            try {
+                ql.themSinhVien(maHe, maSV, tinChiStr);
+            } catch (DuLieuKhongHopLeException e) {
+                danhSachInvalid.add("INVALID " + maSV);
             }
         }
 
-        for (SinhVien sv : list) {
+        for (String inv : danhSachInvalid) {
+            System.out.println(inv);
+        }
+
+        ql.sapXep();
+        for (SinhVien sv : ql.getDanhSach()) {
             System.out.println(sv);
         }
+
+        System.out.println("TONG " + ql.tongHocPhi());
     }
 }
